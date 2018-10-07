@@ -1,6 +1,6 @@
 -- | The Tetris game (main module)
 module Main where
-import ConsoleGUI       -- cabal install ansi-terminal 
+import ConsoleGUI       -- cabal install ansi-terminal
 --import CodeWorldGUI     -- cabal install codeworld-api
 import Shapes
 
@@ -32,10 +32,13 @@ data Tetris = Tetris (Vector,Shape) Shape [Shape]
 type Vector = (Int,Int)
 
 -- | The size of the well
-wellSize :: (Int,Int)
-wellSize = (wellWidth,wellHeight)
+wellWidth, wellHeight :: Int
 wellWidth = 10
 wellHeight = 20
+
+wellSize :: (Int,Int)
+wellSize = (wellWidth,wellHeight)
+
 
 -- | Starting position for falling pieces
 startPosition :: Vector
@@ -52,27 +55,39 @@ place (v,s) = shiftShape v s
 
 -- | An invariant that startTetris and stepTetris should uphold
 prop_Tetris :: Tetris -> Bool
-prop_Tetris t = True -- incomplete !!!
+prop_Tetris (Tetris (p, s) w r) = prop_Shape s && shapeSize w == wellSize
 
 
 -- | Add black walls around a shape
+createWall :: Int -> Row
+createWall l = replicate l (Just Black)
+
+addWall :: Shape -> Shape
+addWall (S (s:ss)) = S $ (s:ss) ++ [createWall $ length s]
+
 addWalls :: Shape -> Shape
-addWalls s = s -- incomplete !!!
+addWalls s = iterate (rotateShape . addWall) s !! 4
 
 -- | Visualize the current game state. This is what the user will see
 -- when playing the game.
 drawTetris :: Tetris -> Shape
-drawTetris (Tetris (v,p) w _) = w -- incomplete !!!
+drawTetris (Tetris (v,p) w _) = addWalls $ combine (shiftShape v p) w
 
 
 -- | The initial game state
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
-    shape1:supply = repeat (allShapes!!1) -- incomplete !!!
+    shape1:supply = repeat (allShapes!!1)
 
 
 -- | React to input. The function returns 'Nothing' when it's game over,
 -- and @'Just' (n,t)@, when the game continues in a new state @t@.
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
-stepTetris _ t = Just (0,t) -- incomplete !!!
+stepTetris _ t = tick t
+
+move :: Vector -> Tetris -> Tetris
+move v1 (Tetris (v2, p) w r) = Tetris (vAdd v1 v2, p) w r
+
+tick :: Tetris -> Maybe (Int, Tetris)
+tick (Tetris (v, p) w r) = Just (0, (Tetris (vAdd (0, 1) v, p) w r))
