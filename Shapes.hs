@@ -326,8 +326,10 @@ zipShapeWith f (S s1) (S s2) = S $ zipWith (\x y -> zipWith f x y) s1 s2
 
 -}
 
--- | Combine two shapes. The two shapes should not overlap.
--- The resulting shape will be big enough to fit both shapes.
+-- "combine" takes two shapes and puts them together to create
+-- one shape which is the size of the two shapes combined.
+-- If any squares overlap, a black square is put in
+-- the overlapping position.
 
 combine :: Shape -> Shape -> Shape
 combine s1 s2 = zipShapeWith cmb (padShapeTo (shapeSize s2) s1) (padShapeTo (shapeSize s1) s2)

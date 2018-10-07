@@ -53,28 +53,35 @@ place :: (Vector,Shape) -> Shape
 place (v,s) = shiftShape v s
 
 
--- | An invariant that startTetris and stepTetris should uphold
+-- prop_Tetris return a True value if prop_Shape returns
+-- True and the size of the well is equal to the shapeSize of the well
+
 prop_Tetris :: Tetris -> Bool
 prop_Tetris (Tetris (p, s) w r) = prop_Shape s && shapeSize w == wellSize
 
 
--- | Add black walls around a shape
-createWall :: Int -> Row
-createWall l = replicate l (Just Black)
+-- addWalls adds squares of black around the
+-- input shape by rotating it 4 times, adding
+-- the wall pieces one side at a time
 
 addWall :: Shape -> Shape
-addWall (S (s:ss)) = S $ (s:ss) ++ [createWall $ length s]
+addWall (S (s:ss)) = S $ (s:ss) ++ [createWall]
+  where createWall = replicate (length s) (Just Black)
 
 addWalls :: Shape -> Shape
 addWalls s = iterate (rotateShape . addWall) s !! 4
 
--- | Visualize the current game state. This is what the user will see
--- when playing the game.
+
+-- drawTetris creates the game field by combining
+-- the first falling shape and the well
+
 drawTetris :: Tetris -> Shape
 drawTetris (Tetris (v,p) w _) = addWalls $ combine (shiftShape v p) w
 
 
--- | The initial game state
+-- startTetris creates a simple initialization of the game,
+-- putting index 1 of allShapes in an empty well
+
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
@@ -83,11 +90,25 @@ startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
 
 -- | React to input. The function returns 'Nothing' when it's game over,
 -- and @'Just' (n,t)@, when the game continues in a new state @t@.
+
+-- (currently only calls the tick function,
+-- not caring for any actual user input)
+
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
 stepTetris _ t = tick t
 
+
+-- "move" adds the input Vector with the current state of the game
+-- which will move the currently falling piece accordingly
+
 move :: Vector -> Tetris -> Tetris
-move v1 (Tetris (v2, p) w r) = Tetris (vAdd v1 v2, p) w r
+move v1 (Tetris (v2, p) w r) = Tetris (v1 `vAdd` v2, p) w r
+
+
+-- "tick" makes sure that the game actually changes according
+-- to the user input. For now it only moves the piece down
+-- one position, which means any user input will also move it down
+-- one position.
 
 tick :: Tetris -> Maybe (Int, Tetris)
 tick (Tetris (v, p) w r) = Just (0, (Tetris (vAdd (0, 1) v, p) w r))
