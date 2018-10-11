@@ -85,17 +85,19 @@ drawTetris (Tetris (v,p) w _) = addWalls $ combine (shiftShape v p) w
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
-    shape1:supply = repeat (allShapes!!1)
+    shape1:supply = repeat (allShapes!!0)
 
 
--- | React to input. The function returns 'Nothing' when it's game over,
--- and @'Just' (n,t)@, when the game continues in a new state @t@.
-
--- (currently only calls the tick function,
--- not caring for any actual user input)
+-- stepTetris reacts to user input and moves the
+-- piece accordingly
 
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
-stepTetris _ t = tick t
+stepTetris MoveDown t = tick $ move (0,1) t
+stepTetris MoveLeft t = tick $ movePiece (-1) t
+stepTetris MoveRight t = tick $ movePiece 1 t
+stepTetris Rotate t = tick $ rotatePiece t
+
+stepTetris _ t                          = tick t
 
 
 -- "move" adds the input Vector with the current state of the game
@@ -106,9 +108,109 @@ move v1 (Tetris (v2, p) w r) = Tetris (v1 `vAdd` v2, p) w r
 
 
 -- "tick" makes sure that the game actually changes according
--- to the user input. For now it only moves the piece down
--- one position, which means any user input will also move it down
--- one position.
+-- to the user input. Guards are put in to make sure
+-- that the falling piece does not move further down
+-- when it has reached the bottom.
 
 tick :: Tetris -> Maybe (Int, Tetris)
-tick (Tetris (v, p) w r) = Just (0, (Tetris (vAdd (0, 1) v, p) w r))
+tick t
+  | collision update = dropNewPiece t
+  | otherwise        = Just (0, update)
+    where update = move (0, 1) t
+
+{-
+
+-- ** C01
+
+-}
+
+-- collision tests if the piece overlaps with any side
+-- of the well or other placed shape
+
+collision :: Tetris -> Bool
+collision (Tetris ((x, y), p) w r)
+  | x < 0                          = True
+  | (x + width) > wellWidth        = True
+  | (y + height) > wellHeight      = True
+  | overlaps (place ((x, y), p)) w = True
+  | otherwise                      = False
+    where (width, height) = shapeSize p
+
+{-
+
+-- ** C03
+
+-}
+
+-- movePiece is used for horizontal movement of
+-- the falling piece. If the shape is colliding
+-- with either the left or right side, it will not
+-- move further to each respective way.
+
+movePiece :: Int -> Tetris -> Tetris
+movePiece n t
+  | collision newPos = t
+  | otherwise        = newPos
+  where newPos = move (n, 0) t
+
+{-
+
+-- ** C04
+
+&
+
+-- ** C06
+
+-}
+
+-- rotate is rotates the falling shape of the input Tetris,
+-- regardless if it collides with anything.
+
+rotate :: Tetris -> Tetris
+rotate (Tetris (v, p) w r) = (Tetris (v, rotateShape(p)) w r)
+
+
+-- rotatePiece takes a Tetris and checks if any collision
+-- occurs when the falling shape is rotated.
+
+rotatePiece :: Tetris -> Tetris
+rotatePiece t
+  | collision rotPos = adjust (rotate t)
+  | otherwise        = rotPos
+  where rotPos = rotate t
+
+{-
+
+-- ** C05
+
+-}
+
+-- adjust checks if the rotated shape collides with any sides
+-- or the bottom of the well, and places the rotated shape
+-- accordingly, instead of blocking the rotation.
+
+adjust :: Tetris -> Tetris
+adjust (Tetris ((x, y), p) w r)
+  | (x + width) > wellWidth   = (Tetris ((wellWidth-width, y), p) w r)
+  | (y + height) > wellHeight = (Tetris ((x, y-(height-1)), p) w r)
+  | otherwise                 = (Tetris ((x, y), p) w r)
+  where (width,height) = shapeSize p
+
+
+{-
+
+-- ** C07
+
+-}
+
+-- dropNewPiece is called when the currently falling piece
+-- collides with something downwards, meaning it shall be
+-- placed there. A piece from the supply of shapes is used
+-- from the startPosition, while the well is shanged to include
+-- the previously falling shape.
+
+dropNewPiece :: Tetris -> Maybe (Int,Tetris)
+dropNewPiece (Tetris (v, p) w (r:rs))
+  | collision newPiece = Nothing
+  | otherwise          = Just (0, newPiece)
+  where newPiece = (Tetris (startPosition, r) (combine w (place(v,p))) rs)
