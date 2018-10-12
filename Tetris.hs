@@ -80,24 +80,27 @@ drawTetris (Tetris (v,p) w _) = addWalls $ combine (shiftShape v p) w
 
 
 -- startTetris creates a simple initialization of the game,
--- putting index 1 of allShapes in an empty well
+-- putting a shapes from allShapes in the well, with the
+-- index 0-6, depending on the input double.
 
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
-    shape1:supply = repeat (allShapes!!0)
+    shape1:supply = map (allShapes!!) (map floor (map (*6.99) rs))
+    -- BÄTTRE SÄTT ATT FIXA RANDOM? enbart 0.5 för lägsta och högsta
+      --repeat (allShapes!!round(rs*(length(allShapes)-1)))
 
 
 -- stepTetris reacts to user input and moves the
 -- piece accordingly
 
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
-stepTetris MoveDown t = tick $ move (0,1) t
-stepTetris MoveLeft t = tick $ movePiece (-1) t
-stepTetris MoveRight t = tick $ movePiece 1 t
-stepTetris Rotate t = tick $ rotatePiece t
+stepTetris MoveDown t  = tick t
+stepTetris MoveLeft t  = Just (0, movePiece (-1) t)
+stepTetris MoveRight t = Just (0, movePiece 1 t)
+stepTetris Rotate t    = Just (0, rotatePiece t)
 
-stepTetris _ t                          = tick t
+stepTetris _ t      = tick t
 
 
 -- "move" adds the input Vector with the current state of the game
@@ -167,7 +170,7 @@ movePiece n t
 -- regardless if it collides with anything.
 
 rotate :: Tetris -> Tetris
-rotate (Tetris (v, p) w r) = (Tetris (v, rotateShape(p)) w r)
+rotate (Tetris (v, p) w r) = Tetris (v, rotateShape(p)) w r
 
 
 -- rotatePiece takes a Tetris and checks if any collision
@@ -214,3 +217,13 @@ dropNewPiece (Tetris (v, p) w (r:rs))
   | collision newPiece = Nothing
   | otherwise          = Just (0, newPiece)
   where newPiece = (Tetris (startPosition, r) (combine w (place(v,p))) rs)
+      --  (n,_)        =
+
+
+{-
+
+-- ** C08
+
+-}
+
+-- clearLines :: Shape -> (Int, Shape)
